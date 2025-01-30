@@ -148,19 +148,39 @@
       }
 
       function addCard() {
-        let cardId = document.getElementById("card-id").value;
+        let cardId = document.getElementById("card-id").value.trim();
         if (!cardId) return alert("Введите номер карты!");
 
-        fetch("/register_card", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ card_id: cardId }),
-        })
+        // Сначала проверяем, есть ли карта в списке
+        fetch("/get_cards")
           .then((response) => response.json())
-          .then(() => {
-            fetchCards();
-            document.getElementById("card-id").value = "";
-          });
+          .then((data) => {
+            if (data.cards.includes(cardId)) {
+              alert("❌ Эта карта уже зарегистрирована!");
+              return;
+            }
+
+            // Если карты нет, отправляем запрос на регистрацию
+            fetch("/register_card", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ card_id: cardId }),
+            })
+              .then((response) => response.json())
+              .then((result) => {
+                if (result.status === "card_already_registered") {
+                  alert("❌ Эта карта уже есть в базе данных!");
+                } else if (result.status === "card_registered") {
+                  alert("✅ Карта успешно добавлена!");
+                  fetchCards(); // Обновляем список карт
+                  document.getElementById("card-id").value = ""; // Очищаем поле ввода
+                }
+              })
+              .catch((error) =>
+                console.error("Ошибка при добавлении карты:", error)
+              );
+          })
+          .catch((error) => console.error("Ошибка при проверке карт:", error));
       }
 
       function removeCard(cardId) {
