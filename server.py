@@ -32,8 +32,8 @@ def home():
 @app.route('/check_card', methods=['GET', 'POST'])
 def check_card():
     if request.method == 'GET':
-        return jsonify({"status": "ready"}), 200  # Просто подтверждаем, что маршрут работает
-
+        return jsonify({"status": "ready"}), 200  # Подтверждение работы маршрута
+    
     print("Received raw data:", request.data)  # Логируем входящие данные
     data = request.get_json(force=True, silent=True)
 
@@ -44,12 +44,16 @@ def check_card():
     if not card_id:
         return jsonify({"error": "Missing card_id"}), 400
 
+    # Отладка: Выводим, что получили
+    print(f"Received card_id: {card_id}")
+
     if check_card_in_db(card_id):
         response = {"status": "access_granted"}
     else:
         response = {"status": "access_denied"}
 
     return jsonify(response)
+
 
 
 @app.route('/register_card', methods=['POST'])
