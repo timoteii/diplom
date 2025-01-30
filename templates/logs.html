@@ -3,65 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Логи и управление картами</title>
+    <title>Логи запросов</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
     <style>
       body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-      }
-      table {
-        width: 80%;
-        margin: 20px auto;
-        border-collapse: collapse;
-      }
-      th,
-      td {
-        border: 1px solid black;
-        padding: 10px;
-        text-align: center;
-      }
-      th {
-        background-color: #ddd;
-      }
-      button {
-        padding: 10px 15px;
-        margin: 10px;
-        cursor: pointer;
+        background-color: #f8f9fa;
       }
       .container {
-        display: flex;
-        justify-content: center;
-        gap: 50px;
+        max-width: 900px;
+        margin-top: 30px;
       }
-      .panel {
-        width: 40%;
+      .table-container {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: white;
+        padding: 10px;
+      }
+      .table thead {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 2;
+      }
+      .table tbody {
+        font-size: 14px;
+      }
+      .btn-container {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
       }
     </style>
   </head>
   <body>
-    <h2>Логи запросов</h2>
-    <button onclick="clearLogs()">Очистить логи</button>
-    <table>
-      <thead>
-        <tr>
-          <th>Номер карты</th>
-          <th>Ответ сервера</th>
-          <th>Время запроса</th>
-        </tr>
-      </thead>
-      <tbody id="logs-table">
-        <!-- Данные логов будут загружаться сюда -->
-      </tbody>
-    </table>
-
     <div class="container">
-      <div class="panel">
-        <h3>Зарегистрированные карты</h3>
-        <ul id="cards-list">
-          <!-- Список зарегистрированных карт -->
-        </ul>
-        <input type="text" id="card-id-input" placeholder="Введите ID карты" />
-        <button onclick="addCard()">Добавить карту</button>
+      <h2 class="text-center">Логи запросов</h2>
+
+      <div class="btn-container">
+        <button class="btn btn-danger" onclick="clearLogs()">
+          Очистить логи
+        </button>
+        <button class="btn btn-primary" onclick="fetchLogs()">Обновить</button>
+      </div>
+
+      <div class="table-container">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Номер карты</th>
+              <th>Ответ сервера</th>
+              <th>Время запроса</th>
+            </tr>
+          </thead>
+          <tbody id="logs-table"></tbody>
+        </table>
       </div>
     </div>
 
@@ -73,50 +73,32 @@
             const table = document.getElementById("logs-table");
             table.innerHTML = "";
             data.logs.forEach((log) => {
-              let row = `<tr><td>${log[0]}</td><td>${log[1]}</td><td>${log[2]}</td></tr>`;
+              let cardId = log[0].match(/"card_id":\s*"([^"]+)"/);
+              let responseText = log[1].match(/"status":\s*"([^"]+)"/);
+              let time = new Date(log[2]).toLocaleString();
+
+              let row = `<tr>
+                            <td>${cardId ? cardId[1] : "Неизвестно"}</td>
+                            <td>${
+                              responseText ? responseText[1] : "Ошибка"
+                            }</td>
+                            <td>${time}</td>
+                        </tr>`;
               table.innerHTML += row;
             });
           });
       }
 
-      function fetchCards() {
-        fetch("/get_cards")
-          .then((response) => response.json())
-          .then((data) => {
-            const list = document.getElementById("cards-list");
-            list.innerHTML = "";
-            data.forEach((card) => {
-              let item = `<li>${card} <button onclick="removeCard('${card}')">Удалить</button></li>`;
-              list.innerHTML += item;
-            });
-          });
-      }
-
       function clearLogs() {
-        fetch("/clear_logs", { method: "POST" })
-          .then((response) => response.text())
-          .then(() => fetchLogs());
+        fetch("/clear_logs", { method: "POST" }).then((response) => {
+          if (response.ok) {
+            fetchLogs();
+          }
+        });
       }
 
-      function addCard() {
-        const cardId = document.getElementById("card-id-input").value;
-        fetch("/add_card", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ card_id: cardId }),
-        }).then(() => fetchCards());
-      }
-
-      function removeCard(cardId) {
-        fetch("/remove_card", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ card_id: cardId }),
-        }).then(() => fetchCards());
-      }
-
-      setInterval(fetchLogs, 2000); // Автообновление логов раз в 2 секунды
-      setInterval(fetchCards, 5000); // Обновление списка карт раз в 5 секунд
+      setInterval(fetchLogs, 2000);
+      fetchLogs();
     </script>
   </body>
 </html>
