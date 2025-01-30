@@ -31,6 +31,7 @@ def home():
 
 @app.route('/check_card', methods=['GET','POST'])
 def check_card():
+    print("Received raw data:", request.data)  # Логируем входящие данные
     data = request.get_json(force=True, silent=True)
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
