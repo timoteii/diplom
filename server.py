@@ -29,20 +29,28 @@ def home():
     return "Server is running!"
 
 
-@app.route('/check_card', methods=['GET','POST'])
+@app.route('/check_card', methods=['GET', 'POST'])
 def check_card():
+    if request.method == 'GET':
+        return jsonify({"status": "ready"}), 200  # Просто подтверждаем, что маршрут работает
+
     print("Received raw data:", request.data)  # Логируем входящие данные
     data = request.get_json(force=True, silent=True)
+
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
+
     card_id = data.get('card_id')
-    
+    if not card_id:
+        return jsonify({"error": "Missing card_id"}), 400
+
     if check_card_in_db(card_id):
         response = {"status": "access_granted"}
     else:
         response = {"status": "access_denied"}
-    
+
     return jsonify(response)
+
 
 @app.route('/register_card', methods=['POST'])
 def register_card():
