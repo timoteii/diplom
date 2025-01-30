@@ -31,7 +31,9 @@ def home():
 
 @app.route('/check_card', methods=['GET','POST'])
 def check_card():
-    data = request.get_json(force=True)
+    data = request.get_json(force=True, silent=True)
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
     card_id = data.get('card_id')
     
     if check_card_in_db(card_id):
