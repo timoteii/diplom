@@ -102,14 +102,25 @@ def register_card():
 
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("INSERT INTO cards (card_id) VALUES (%s) ON CONFLICT DO NOTHING", (card_id,))
-        conn.commit()
+
+        # Проверяем, есть ли уже такая карта
+        cur.execute("SELECT COUNT(*) FROM cards WHERE card_id = %s", (card_id,))
+        card_exists = cur.fetchone()[0] > 0
+
+        if card_exists:
+            response = {"status": "card_already_registered"}
+            status_code = 409  # Код 409: Conflict
+        else:
+            cur.execute("INSERT INTO cards (card_id) VALUES (%s)", (card_id,))
+            conn.commit()
+            response = {"status": "card_registered"}
+            status_code = 201
+
         cur.close()
         conn.close()
 
-        response = {"status": "card_registered"}
-        log_request("POST", "/register_card", str(request_data), 201, str(response))
-        return jsonify(response), 201
+        log_request("POST", "/register_card", str(request_data), status_code, str(response))
+        return jsonify(response), status_code
     except Exception as e:
         response = {"error": str(e)}
         log_request("POST", "/register_card", str(request_data), 500, str(response))
