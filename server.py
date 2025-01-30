@@ -1,8 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import psycopg2
-import os
 
-# Инициализация Flask
 app = Flask(__name__)
 
 # Подключение к базе данных PostgreSQL
@@ -13,7 +11,7 @@ DB_USER = "postgres"
 DB_PASSWORD = "FKkFGzRDbzxOfdejvsbAesNwmnxOOnwq"
 
 def get_db_connection():
-    """Функция для подключения к базе данных PostgreSQL."""
+    """Подключение к базе данных."""
     return psycopg2.connect(
         host=DB_HOST,
         port=DB_PORT,
@@ -23,7 +21,7 @@ def get_db_connection():
     )
 
 def log_request(method, endpoint, request_body, response_status, response_body):
-    """Функция для записи логов запросов и ответов в базу данных."""
+    """Запись логов запросов и ответов в базу данных."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -37,13 +35,11 @@ def log_request(method, endpoint, request_body, response_status, response_body):
     except Exception as e:
         print(f"Ошибка при записи лога: {e}")
 
-# Создание таблицы logs при запуске
+# Инициализация базы данных
 def setup_database():
-    """Создает таблицы в базе данных, если они не существуют."""
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Таблица логов
     cur.execute("""
         CREATE TABLE IF NOT EXISTS logs (
             id SERIAL PRIMARY KEY,
@@ -56,7 +52,6 @@ def setup_database():
         )
     """)
 
-    # Таблица карт
     cur.execute("""
         CREATE TABLE IF NOT EXISTS cards (
             id SERIAL PRIMARY KEY,
@@ -68,29 +63,42 @@ def setup_database():
     cur.close()
     conn.close()
 
-# Проверка карты в базе
-def check_card_in_db(card_id):
-    """Функция проверки, существует ли карта в базе."""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM cards WHERE card_id = %s", (card_id,))
-    result = cur.fetchone()
-    cur.close()
-    conn.close()
-    return result is not None
-
-# Добавление карты
-@app.route('/register_card', methods=['POST'])
-def register_card():
-    """Регистрация новой карты."""
+# Обработчик проверки карт
+@app.route('/check_card', methods=['POST'])
+def check_card():
+    """Проверка карты в базе данных."""
     try:
         request_data = request.get_json()
         card_id = request_data.get("card_id", "")
 
-        if not card_id:
-            response = {"error": "card_id is required"}
-            log_request("POST", "/register_card", str(request_data), 400, str(response))
-            return jsonify(response), 400
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM cards WHERE card_id = %s", (card_id,))
+        exists = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if exists:
+            response = {"status": "access_granted"}
+            status_code = 200
+        else:
+            response = {"status": "access_denied"}
+            status_code = 403
+
+        log_request("POST", "/check_card", str(request_data), status_code, str(response))
+        return jsonify(response), status_code
+    except Exception as e:
+        response = {"error": str(e)}
+        log_request("POST", "/check_card", str(request_data), 500, str(response))
+        return jsonify(response), 500
+
+# Регистрация новой карты
+@app.route('/register_card', methods=['POST'])
+def register_card():
+    """Добавление карты в базу данных."""
+    try:
+        request_data = request.get_json()
+        card_id = request_data.get("card_id", "")
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -108,17 +116,12 @@ def register_card():
         return jsonify(response), 500
 
 # Удаление карты
-@app.route('/delete_card', methods=['POST'])
-def delete_card():
+@app.route('/remove_card', methods=['POST'])
+def remove_card():
     """Удаление карты из базы."""
     try:
         request_data = request.get_json()
         card_id = request_data.get("card_id", "")
-
-        if not card_id:
-            response = {"error": "card_id is required"}
-            log_request("POST", "/delete_card", str(request_data), 400, str(response))
-            return jsonify(response), 400
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -128,39 +131,17 @@ def delete_card():
         conn.close()
 
         response = {"status": "card_deleted"}
-        log_request("POST", "/delete_card", str(request_data), 200, str(response))
+        log_request("POST", "/remove_card", str(request_data), 200, str(response))
         return jsonify(response), 200
     except Exception as e:
         response = {"error": str(e)}
-        log_request("POST", "/delete_card", str(request_data), 500, str(response))
+        log_request("POST", "/remove_card", str(request_data), 500, str(response))
         return jsonify(response), 500
 
-# Проверка карты
-@app.route('/check_card', methods=['POST'])
-def check_card():
-    """Обработчик проверки карты."""
-    try:
-        request_data = request.get_json()
-        card_id = request_data.get("card_id", "")
-
-        if check_card_in_db(card_id):
-            response = {"status": "access_granted"}
-            status_code = 200
-        else:
-            response = {"status": "access_denied"}
-            status_code = 403
-
-        log_request("POST", "/check_card", str(request_data), status_code, str(response))
-        return jsonify(response), status_code
-    except Exception as e:
-        response = {"error": str(e)}
-        log_request("POST", "/check_card", str(request_data), 500, str(response))
-        return jsonify(response), 500
-
-# Список всех карт
-@app.route('/list_cards', methods=['GET'])
-def list_cards():
-    """Получение списка всех зарегистрированных карт."""
+# Получение всех зарегистрированных карт
+@app.route('/get_cards', methods=['GET'])
+def get_cards():
+    """Получение списка карт из базы данных."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -169,17 +150,14 @@ def list_cards():
         cur.close()
         conn.close()
 
-        response = {"cards": cards}
-        log_request("GET", "/list_cards", "{}", 200, str(response))
-        return jsonify(response), 200
+        return jsonify({"cards": cards})
     except Exception as e:
-        response = {"error": str(e)}
-        log_request("GET", "/list_cards", "{}", 500, str(response))
-        return jsonify(response), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/logs')
-def logs():
-    """Выводит веб-страницу с логами запросов"""
+# Получение логов
+@app.route('/get_logs', methods=['GET'])
+def get_logs():
+    """Получение последних 50 логов."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -188,18 +166,40 @@ def logs():
         cur.close()
         conn.close()
 
-        return render_template("logs.html", logs=logs)
+        return jsonify({"logs": logs})
     except Exception as e:
-        return f"Ошибка загрузки логов: {e}"
+        return jsonify({"error": str(e)}), 500
 
-# Проверка сервера
-@app.route('/', methods=['GET'])
+# Очистка логов
+@app.route('/clear_logs', methods=['POST'])
+def clear_logs():
+    """Удаление всех логов."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM logs")
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({"status": "logs_cleared"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Интерфейс логов
+@app.route('/logs')
+def logs():
+    """Выводит страницу с логами."""
+    return render_template("logs.html")
+
+# Главная страница
+@app.route('/')
 def home():
-    """Статус сервера."""
-    response = {"status": "running"}
-    log_request("GET", "/", "{}", 200, str(response))
-    return jsonify(response), 200
+    return jsonify({"status": "running"}), 200
 
 if __name__ == '__main__':
-    setup_database()  # Создание таблиц при запуске
+    setup_database()
     app.run(host='0.0.0.0', port=5000)
+
+
+# FKkFGzRDbzxOfdejvsbAesNwmnxOOnwq

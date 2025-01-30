@@ -3,52 +3,120 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Логи запросов</title>
+    <title>Логи и управление картами</title>
     <style>
       body {
         font-family: Arial, sans-serif;
-        margin: 20px;
-        background-color: #f4f4f4;
-      }
-      h2 {
         text-align: center;
       }
       table {
-        width: 100%;
+        width: 80%;
+        margin: 20px auto;
         border-collapse: collapse;
-        background: white;
-        margin-top: 10px;
       }
       th,
       td {
+        border: 1px solid black;
         padding: 10px;
-        border: 1px solid #ddd;
-        text-align: left;
+        text-align: center;
       }
       th {
-        background: #555;
-        color: white;
+        background-color: #ddd;
       }
-      tr:nth-child(even) {
-        background: #f2f2f2;
+      button {
+        padding: 10px 15px;
+        margin: 10px;
+        cursor: pointer;
+      }
+      .container {
+        display: flex;
+        justify-content: center;
+        gap: 50px;
+      }
+      .panel {
+        width: 40%;
       }
     </style>
   </head>
   <body>
     <h2>Логи запросов</h2>
+    <button onclick="clearLogs()">Очистить логи</button>
     <table>
-      <tr>
-        <th>Номер карты</th>
-        <th>Ответ сервера</th>
-        <th>Время запроса</th>
-      </tr>
-      {% for log in logs %}
-      <tr>
-        <td>{{ log[0] }}</td>
-        <td>{{ log[1] }}</td>
-        <td>{{ log[2] }}</td>
-      </tr>
-      {% endfor %}
+      <thead>
+        <tr>
+          <th>Номер карты</th>
+          <th>Ответ сервера</th>
+          <th>Время запроса</th>
+        </tr>
+      </thead>
+      <tbody id="logs-table">
+        <!-- Данные логов будут загружаться сюда -->
+      </tbody>
     </table>
+
+    <div class="container">
+      <div class="panel">
+        <h3>Зарегистрированные карты</h3>
+        <ul id="cards-list">
+          <!-- Список зарегистрированных карт -->
+        </ul>
+        <input type="text" id="card-id-input" placeholder="Введите ID карты" />
+        <button onclick="addCard()">Добавить карту</button>
+      </div>
+    </div>
+
+    <script>
+      function fetchLogs() {
+        fetch("/get_logs")
+          .then((response) => response.json())
+          .then((data) => {
+            const table = document.getElementById("logs-table");
+            table.innerHTML = "";
+            data.forEach((log) => {
+              let row = `<tr><td>${log.card_id}</td><td>${log.status}</td><td>${log.timestamp}</td></tr>`;
+              table.innerHTML += row;
+            });
+          });
+      }
+
+      function fetchCards() {
+        fetch("/get_cards")
+          .then((response) => response.json())
+          .then((data) => {
+            const list = document.getElementById("cards-list");
+            list.innerHTML = "";
+            data.forEach((card) => {
+              let item = `<li>${card} <button onclick="removeCard('${card}')">Удалить</button></li>`;
+              list.innerHTML += item;
+            });
+          });
+      }
+
+      function clearLogs() {
+        fetch("/clear_logs", { method: "POST" })
+          .then((response) => response.text())
+          .then(() => fetchLogs());
+      }
+
+      function addCard() {
+        const cardId = document.getElementById("card-id-input").value;
+        fetch("/add_card", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ card_id: cardId }),
+        }).then(() => fetchCards());
+      }
+
+      function removeCard(cardId) {
+        fetch("/remove_card", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ card_id: cardId }),
+        }).then(() => fetchCards());
+      }
+
+      setInterval(fetchLogs, 2000); // Автообновление логов раз в 2 секунды
+      setInterval(fetchCards, 5000); // Обновление списка карт раз в 5 секунд
+    </script>
   </body>
 </html>
