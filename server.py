@@ -138,22 +138,6 @@ def remove_card():
         log_request("POST", "/remove_card", str(request_data), 500, str(response))
         return jsonify(response), 500
 
-# Получение всех зарегистрированных карт
-@app.route('/get_cards', methods=['GET'])
-def get_cards():
-    """Получение списка карт из базы данных."""
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT card_id FROM cards")
-        cards = [row[0] for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-
-        return jsonify({"cards": cards})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 # Получение логов
 @app.route('/get_logs', methods=['GET'])
 def get_logs():
