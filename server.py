@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import psycopg2
 import os
 
@@ -176,6 +176,21 @@ def list_cards():
         response = {"error": str(e)}
         log_request("GET", "/list_cards", "{}", 500, str(response))
         return jsonify(response), 500
+
+@app.route('/logs')
+def logs():
+    """Выводит веб-страницу с логами запросов"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT request_body, response_body, timestamp FROM logs ORDER BY timestamp DESC LIMIT 50")
+        logs = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        return render_template("logs.html", logs=logs)
+    except Exception as e:
+        return f"Ошибка загрузки логов: {e}"
 
 # Проверка сервера
 @app.route('/', methods=['GET'])
