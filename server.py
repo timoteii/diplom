@@ -24,6 +24,10 @@ def add_card_to_db(card_id):
     conn.close()
     return success
 
+@app.route('/')
+def home():
+    return "Server is running!"
+
 @app.route('/check_card', methods=['POST'])
 def check_card():
     data = request.get_json()
