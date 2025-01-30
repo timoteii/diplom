@@ -29,7 +29,7 @@ def home():
     return "Server is running!"
 
 
-@app.route('/check_card', methods=['POST'])
+@app.route('/check_card', methods=['GET','POST'])
 def check_card():
     data = request.get_json()
     card_id = data.get('card_id')
