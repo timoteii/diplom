@@ -157,7 +157,6 @@ def get_cards():
 # Получение логов
 @app.route('/get_logs', methods=['GET'])
 def get_logs():
-    """Получение последних 50 логов."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -166,7 +165,29 @@ def get_logs():
         cur.close()
         conn.close()
 
-        return jsonify({"logs": logs})
+        formatted_logs = []
+        for log in logs:
+            formatted_logs.append({
+                "request_body": log[0],
+                "response_body": log[1],
+                "timestamp": log[2].isoformat()  # Преобразуем в ISO формат для удобства работы
+            })
+
+        return jsonify({"logs": formatted_logs})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/get_cards', methods=['GET'])
+def get_cards():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT card_id FROM cards")
+        cards = [row[0] for row in cur.fetchall()]
+        cur.close()
+        conn.close()
+
+        return jsonify({"cards": cards})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
