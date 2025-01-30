@@ -92,31 +92,37 @@
         fetch("/get_logs")
           .then((response) => response.json())
           .then((data) => {
+            console.log("Полученные данные:", data); // Логируем для отладки
+
             const table = document.getElementById("logs-table");
             table.innerHTML = "";
-            data.logs.forEach((log) => {
-              let cardIdMatch = log[0]
-                ? log[0].match(/"card_id":\s*"([^"]+)"/)
-                : null;
-              let responseTextMatch = log[1]
-                ? log[1].match(/"status":\s*"([^"]+)"/)
-                : null;
-              let time = new Date(log[2]).toLocaleString();
 
-              let row = `<tr>
-                            <td>${
-                              cardIdMatch ? cardIdMatch[1] : "Неизвестно"
-                            }</td>
-                            <td>${
-                              responseTextMatch
-                                ? responseTextMatch[1]
-                                : "Ошибка"
-                            }</td>
-                            <td>${time}</td>
-                        </tr>`;
-              table.innerHTML += row;
+            data.logs.forEach((log) => {
+              try {
+                // Попробуем сначала привести к строке JSON (заменяем ' на ")
+                let fixedRequestBody = log.request_body.replace(/'/g, '"');
+                let fixedResponseBody = log.response_body.replace(/'/g, '"');
+
+                // Парсим в объект
+                let requestBody = JSON.parse(fixedRequestBody);
+                let responseBody = JSON.parse(fixedResponseBody);
+
+                let cardId = requestBody.card_id || "Неизвестно";
+                let responseText = responseBody.status || "Ошибка";
+                let time = new Date(log.timestamp).toLocaleString();
+
+                let row = `<tr>
+                        <td>${cardId}</td>
+                        <td>${responseText}</td>
+                        <td>${time}</td>
+                    </tr>`;
+                table.innerHTML += row;
+              } catch (error) {
+                console.error("Ошибка обработки лога:", error, log);
+              }
             });
-          });
+          })
+          .catch((error) => console.error("Ошибка получения логов:", error));
       }
 
       function fetchCards() {
