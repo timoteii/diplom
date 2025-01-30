@@ -53,6 +53,13 @@ def register_card():
     
     return jsonify(response)
 
+@app.route('/routes')
+def list_routes():
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append(str(rule))
+    return jsonify(routes)
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
