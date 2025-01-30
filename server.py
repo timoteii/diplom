@@ -31,7 +31,7 @@ def home():
 
 @app.route('/check_card', methods=['GET','POST'])
 def check_card():
-    data = request.get_json()
+    data = request.get_json(force=True)
     card_id = data.get('card_id')
     
     if check_card_in_db(card_id):
