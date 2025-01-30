@@ -72,8 +72,8 @@
           .then((data) => {
             const table = document.getElementById("logs-table");
             table.innerHTML = "";
-            data.forEach((log) => {
-              let row = `<tr><td>${log.card_id}</td><td>${log.status}</td><td>${log.timestamp}</td></tr>`;
+            data.logs.forEach((log) => {
+              let row = `<tr><td>${log[0]}</td><td>${log[1]}</td><td>${log[2]}</td></tr>`;
               table.innerHTML += row;
             });
           });
