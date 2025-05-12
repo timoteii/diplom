@@ -99,23 +99,24 @@
 
             data.logs.forEach((log) => {
               try {
-                // Попробуем сначала привести к строке JSON (заменяем ' на ")
+                // Приводим строки JSON к правильному формату
                 let fixedRequestBody = log.request_body.replace(/'/g, '"');
                 let fixedResponseBody = log.response_body.replace(/'/g, '"');
 
-                // Парсим в объект
+                // Парсим в объекты
                 let requestBody = JSON.parse(fixedRequestBody);
                 let responseBody = JSON.parse(fixedResponseBody);
 
-                let cardId = requestBody.card_id || "Неизвестно";
+                let cardId =
+                  responseBody.card || requestBody.card_id || "Неизвестно";
                 let responseText = responseBody.status || "Ошибка";
                 let time = new Date(log.timestamp).toLocaleString();
 
                 let row = `<tr>
-                        <td>${cardId}</td>
-                        <td>${responseText}</td>
-                        <td>${time}</td>
-                    </tr>`;
+                            <td>${cardId}</td>
+                            <td>${responseText}</td>
+                            <td>${time}</td>
+                        </tr>`;
                 table.innerHTML += row;
               } catch (error) {
                 console.error("Ошибка обработки лога:", error, log);
@@ -133,8 +134,8 @@
             table.innerHTML = "";
             data.cards.forEach((card) => {
               let row = `<tr>
-                            <td>${card}</td>
-                            <td><button class="btn btn-danger btn-sm" onclick="removeCard('${card}')">Удалить</button></td>
+                            <td>${card.card_id} (ID: ${card.id})</td>
+                            <td><button class="btn btn-danger btn-sm" onclick="removeCard('${card.card_id}')">Удалить</button></td>
                         </tr>`;
               table.innerHTML += row;
             });

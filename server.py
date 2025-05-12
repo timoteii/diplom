@@ -73,16 +73,17 @@ def check_card():
 
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM cards WHERE card_id = %s", (card_id,))
-        exists = cur.fetchone()
+        cur.execute("SELECT id FROM cards WHERE card_id = %s", (card_id,))
+        result = cur.fetchone()
         cur.close()
         conn.close()
 
-        if exists:
-            response = {"status": "access_granted"}
+        if result:
+            card_id_with_id = f"{card_id} (ID: {result[0]})"
+            response = {"status": "access_granted", "card": card_id_with_id}
             status_code = 200
         else:
-            response = {"status": "access_denied"}
+            response = {"status": "access_denied", "card": card_id}
             status_code = 403
 
         log_request("POST", "/check_card", str(request_data), status_code, str(response))
@@ -177,8 +178,8 @@ def get_cards():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT card_id FROM cards")
-        cards = [row[0] for row in cur.fetchall()]
+        cur.execute("SELECT id, card_id FROM cards")
+        cards = [{"id": row[0], "card_id": row[1]} for row in cur.fetchall()]
         cur.close()
         conn.close()
 
